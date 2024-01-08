@@ -1,0 +1,28 @@
+name: 'Sops secret loader'
+description: 'This action load secret variable from a sops file'
+inputs:
+  secret-file:
+    description: 'Path of sops encrypted file'
+    required: true
+  age-key:
+    description: 'Age private key to decrypted sops file'
+    required: true
+runs:
+  using: "composite"
+  steps:
+      - name: Setup SOPS
+        uses: nhedger/setup-sops@v2
+        with:
+          version: "latest"
+
+      - name: Loads secrets
+        shell: bash
+        run: |
+          export SOPS_AGE_KEY=${{ inputs.age-key }}
+          for i in $(sops --decrypt ${{ inputs.secret-file }});
+          do
+            eval $i
+            VAR_CONTENT=$(echo $i | awk -F '=' '{ print $2 }')
+            echo "::add-mask::$VAR_CONTENT"
+            echo $i >> $GITHUB_ENV
+          done
